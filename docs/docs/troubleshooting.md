@@ -98,7 +98,9 @@ If you are using VS Code and require requests to be made through a proxy, you ar
 
 #### code-server
 
-Continue can be used in [code-server](https://coder.com/), but if you are running across an error in the logs that includes "This is likely because the editor is not running in a secure context", please see [their documentation on securely exposing code-server](https://coder.com/docs/code-server/latest/guide#expose-code-server).
+Continue fully supports [code-server](https://coder.com/) and other web-based VS Code environments. Copy, cut, and paste operations work seamlessly in the Continue chat input.
+
+If you encounter an error in the logs that includes "This is likely because the editor is not running in a secure context", please see [their documentation on securely exposing code-server](https://coder.com/docs/code-server/latest/guide#expose-code-server).
 
 ### I installed Continue, but don't see the sidebar window
 
