@@ -48,6 +48,46 @@ sidebarTitle: "Anthropic"
   **Check out a more advanced configuration [here](https://hub.continue.dev/anthropic/claude-sonnet-4-5?view=config)**
 </Info>
 
+## Azure AI Foundry
+
+Anthropic models are also available through Azure AI Foundry. To use Azure-hosted Anthropic endpoints, configure the `apiBase` parameter with your Azure resource URL:
+
+<Tabs>
+  <Tab title="YAML">
+  ```yaml title="config.yaml"
+  name: My Config
+  version: 0.0.1
+  schema: v1
+
+  models:
+    - name: <MODEL_NAME>
+      provider: anthropic
+      model: <MODEL_ID>
+      apiBase: https://<YOUR_RESOURCE>.services.ai.azure.com/models
+      apiKey: <YOUR_AZURE_API_KEY>
+  ```
+  </Tab>
+  <Tab title="JSON (Deprecated)">
+  ```json title="config.json"
+  {
+    "models": [
+      {
+        "title": "<MODEL_NAME>",
+        "provider": "anthropic",
+        "model": "<MODEL_ID>",
+        "apiBase": "https://<YOUR_RESOURCE>.services.ai.azure.com/models",
+        "apiKey": "<YOUR_AZURE_API_KEY>"
+      }
+    ]
+  }
+  ```
+  </Tab>
+</Tabs>
+
+<Info>
+  Azure endpoints use the `api-key` header format instead of the standard `x-api-key` header. Continue automatically detects Azure endpoints and applies the correct authentication method.
+</Info>
+
 ## How to Enable Prompt Caching with Claude
 
 Anthropic supports [prompt caching with Claude](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching), which allows Claude models to cache system messages and conversation history between requests to improve performance and reduce costs.
