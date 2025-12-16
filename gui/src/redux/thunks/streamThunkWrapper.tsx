@@ -42,8 +42,8 @@ export const streamThunkWrapper = createAsyncThunk<
       const { parsedError, statusCode, message, modelTitle, providerName } =
         analyzeError(e, selectedModel);
 
-      const shouldRetry =
-        isOverloadedErrorMessage(message) && attempt < OVERLOADED_RETRIES;
+      const isLastAttempt = attempt === OVERLOADED_RETRIES;
+      const shouldRetry = isOverloadedErrorMessage(message) && !isLastAttempt;
 
       if (shouldRetry) {
         await dispatch(cancelStream());
