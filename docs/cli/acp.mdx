@@ -4,21 +4,34 @@ description: "Run Continue CLI as an ACP server for Zed and other ACP-compatible
 sidebarTitle: "ACP (Zed)"
 ---
 
-Continue CLI can run as an Agent Client Protocol (ACP) server over stdio. This
-lets editors like Zed connect directly to Continue for streaming responses and
-tool execution.
+Continue CLI can run as an Agent Client Protocol (ACP) server over stdio. This lets editors like Zed connect directly to Continue for streaming responses and tool execution.
+
+<Info>
+  The ACP server enables seamless integration between Continue's powerful AI capabilities and ACP-compatible editors through a standardized protocol.
+</Info>
 
 ## Requirements
 
-- Continue CLI installed (`cn` on your PATH)
-- A valid Continue config with at least one model
-- Zed with External Agents enabled
+<Steps>
+  <Step title="Install Continue CLI">
+    Ensure `cn` is on your PATH. See the [installation guide](/cli/install) for details.
+  </Step>
+  
+  <Step title="Configure Continue">
+    Set up a valid Continue configuration with at least one model. See [configuration docs](/setup/configuration) for details.
+  </Step>
+  
+  <Step title="Enable External Agents in Zed">
+    Make sure your Zed editor has External Agents enabled.
+  </Step>
+</Steps>
 
 ## Configure Zed
 
 Add an external agent entry to `~/.config/zed/settings.json`:
 
-```json
+<CodeGroup>
+```json Basic Setup
 {
   "agent_servers": {
     "Continue": {
@@ -29,15 +42,20 @@ Add an external agent entry to `~/.config/zed/settings.json`:
 }
 ```
 
-### Optional flags
-
-```json
+```json Read-only Mode
 {
   "agent_servers": {
     "Continue (Read-only)": {
       "command": "cn",
       "args": ["acp", "--readonly"]
-    },
+    }
+  }
+}
+```
+
+```json Custom Config
+{
+  "agent_servers": {
     "Continue (Custom Config)": {
       "command": "cn",
       "args": ["acp", "--config", "/path/to/config.yaml"]
@@ -45,18 +63,46 @@ Add an external agent entry to `~/.config/zed/settings.json`:
   }
 }
 ```
+</CodeGroup>
 
-## Use in Zed
+<Accordion title="Configuration Options">
+  - **Basic Setup**: Auto-approves tool access for full functionality
+  - **Read-only Mode**: Uses `--readonly` flag to restrict write operations
+  - **Custom Config**: Uses `--config` flag to specify an alternate configuration file path
+</Accordion>
 
-1. Open a workspace in Zed.
-2. Open the AI panel and select the Continue agent.
-3. Send prompts as usual. Continue streams via ACP.
+## Using Continue in Zed
 
-## Notes
+<Steps>
+  <Step title="Open Your Workspace">
+    Launch Zed and open your project workspace.
+  </Step>
+  
+  <Step title="Access the AI Panel">
+    Open the AI panel in Zed and select the Continue agent from the available agents.
+  </Step>
+  
+  <Step title="Start Chatting">
+    Send prompts as you normally would. Continue will stream responses via ACP and execute tools as needed.
+  </Step>
+</Steps>
 
-- ACP mode defaults to auto-approve tool access. Use `--readonly` for a
-  read-only session.
-- ACP currently supports `session/new`, `session/prompt`, `session/cancel`, and
-  `session/set_mode`. Session loading is not yet available.
-- MCP servers provided by the client are ignored; configure MCP servers in your
-  Continue config instead.
+## Important Notes
+
+<Warning>
+  **Tool Permissions**: ACP mode defaults to auto-approve tool access. For safer operation, use the `--readonly` flag to restrict write operations.
+</Warning>
+
+<Note>
+  **Supported ACP Methods**: The server currently supports:
+  - `session/new` - Create new chat sessions
+  - `session/prompt` - Send prompts and receive responses
+  - `session/cancel` - Cancel in-progress requests
+  - `session/set_mode` - Switch between tool permission modes
+  
+  Session loading functionality is not yet available.
+</Note>
+
+<Info>
+  **MCP Server Configuration**: MCP servers provided by the ACP client are ignored. Configure all MCP servers in your Continue configuration instead.
+</Info>
