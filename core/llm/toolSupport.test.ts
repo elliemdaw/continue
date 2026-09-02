@@ -2,70 +2,6 @@
 import { PROVIDER_TOOL_SUPPORT, isRecommendedAgentModel } from "./toolSupport";
 
 describe("PROVIDER_TOOL_SUPPORT", () => {
-  describe("continue-proxy", () => {
-    const supportsFn = PROVIDER_TOOL_SUPPORT["continue-proxy"];
-
-    it("should return true for Claude 3.5 models", () => {
-      expect(
-        supportsFn("ownerSlug/packageSlug/anthropic/claude-3-5-sonnet"),
-      ).toBe(true);
-      expect(
-        supportsFn("ownerSlug/packageSlug/anthropic/claude-3.5-sonnet"),
-      ).toBe(true);
-    });
-
-    it("should return true for Claude 3.7 models", () => {
-      expect(
-        supportsFn("ownerSlug/packageSlug/anthropic/claude-3-7-haiku"),
-      ).toBe(true);
-      expect(
-        supportsFn("ownerSlug/packageSlug/anthropic/claude-3.7-sonnet"),
-      ).toBe(true);
-    });
-
-    it("should return true for GPT-4 models", () => {
-      expect(supportsFn("ownerSlug/packageSlug/openai/gpt-4-turbo")).toBe(true);
-      expect(
-        supportsFn("ownerSlug/packageSlug/openai/gpt-4-1106-preview"),
-      ).toBe(true);
-    });
-
-    it("should return true for Gemma models", () => {
-      expect(supportsFn("ownerSlug/packageSlug/openai/gemma")).toBe(true);
-      expect(supportsFn("ownerSlug/packageSlug/openai/gemma3")).toBe(true);
-    });
-
-    it("should return true for O3 models", () => {
-      expect(supportsFn("ownerSlug/packageSlug/openai/o3-preview")).toBe(true);
-    });
-
-    it("should return true for Gemini models", () => {
-      expect(supportsFn("ownerSlug/packageSlug/gemini/gemini-pro")).toBe(true);
-      expect(supportsFn("ownerSlug/packageSlug/gemini/gemini-2.5-pro")).toBe(
-        true,
-      );
-    });
-
-    it("should return false for unsupported models", () => {
-      expect(supportsFn("ownerSlug/packageSlug/openai/gpt-3.5-turbo")).toBe(
-        false,
-      );
-      expect(supportsFn("ownerSlug/packageSlug/anthropic/claude-2")).toBe(
-        false,
-      );
-      expect(supportsFn("ownerSlug/packageSlug/together/llama-3")).toBe(false);
-    });
-
-    it("should handle case insensitivity", () => {
-      expect(
-        supportsFn("ownerSlug/packageSlug/anthropic/CLAUDE-3-5-sonnet"),
-      ).toBe(true);
-      expect(supportsFn("ownerSlug/packageSlug/openai/GPT-4-turbo")).toBe(true);
-      expect(supportsFn("ownerSlug/packageSlug/openai/Gemma3")).toBe(true);
-      expect(supportsFn("ownerSlug/packageSlug/gemini/GEMINI-pro")).toBe(true);
-    });
-  });
-
   describe("anthropic", () => {
     const supportsFn = PROVIDER_TOOL_SUPPORT["anthropic"];
 
@@ -107,6 +43,7 @@ describe("PROVIDER_TOOL_SUPPORT", () => {
     it("should return true for Gemma models", () => {
       expect(supportsFn("gemma")).toBe(true);
       expect(supportsFn("gemma3")).toBe(true);
+      expect(supportsFn("gemma4")).toBe(true);
     });
 
     it("should return undefined for unsupported models", () => {
@@ -118,6 +55,7 @@ describe("PROVIDER_TOOL_SUPPORT", () => {
       expect(supportsFn("GPT-4-turbo")).toBe(true);
       expect(supportsFn("O3-preview")).toBe(true);
       expect(supportsFn("Gemma3")).toBe(true);
+      expect(supportsFn("Gemma4")).toBe(true);
     });
   });
 
@@ -388,14 +326,62 @@ describe("PROVIDER_TOOL_SUPPORT", () => {
     const supportsFn = PROVIDER_TOOL_SUPPORT["openrouter"];
 
     it("should return false for moonshotai/kimi-k2:free model", () => {
-      // This fixes issue #6619
       expect(supportsFn("moonshotai/kimi-k2:free")).toBe(false);
+    });
+
+    it("should return true for supported prefixes", () => {
+      expect(supportsFn("openai/gpt-4o")).toBe(true);
+      expect(supportsFn("anthropic/claude-sonnet-4")).toBe(true);
+      expect(supportsFn("google/gemini-2-flash")).toBe(true);
+      expect(supportsFn("google/gemini-3-pro-preview")).toBe(true);
+      expect(supportsFn("deepseek/deepseek-r1")).toBe(true);
+      expect(supportsFn("qwen/qwen3-coder-30b")).toBe(true);
+      expect(supportsFn("meta-llama/llama-4-scout")).toBe(true);
+    });
+
+    it("should strip :free/:extended/:beta suffixes before matching", () => {
+      expect(supportsFn("meta-llama/llama-3.2-3b-instruct:free")).toBe(true);
+      expect(supportsFn("deepseek/deepseek-r1:extended")).toBe(true);
+      expect(supportsFn("qwen/qwen3-coder:beta")).toBe(true);
+    });
+
+    it("should return false for unsupported models", () => {
+      expect(supportsFn("unknown/random-model")).toBe(false);
+      expect(supportsFn("some-provider/vision-model")).toBe(false);
+    });
+
+    it("should return false for excluded model patterns", () => {
+      expect(supportsFn("some/vision-model")).toBe(false);
+      expect(supportsFn("some/math-model")).toBe(false);
+      expect(supportsFn("some/guard-model")).toBe(false);
+    });
+  });
+
+  describe("clawrouter", () => {
+    const supportsFn = PROVIDER_TOOL_SUPPORT["clawrouter"];
+
+    it("should return true for blockrun routing profiles", () => {
+      expect(supportsFn("blockrun/auto")).toBe(true);
+      expect(supportsFn("blockrun/eco")).toBe(true);
+      expect(supportsFn("blockrun/premium")).toBe(true);
+      expect(supportsFn("blockrun/free")).toBe(true);
+    });
+
+    it("should return true for tool-supporting models", () => {
+      expect(supportsFn("gpt-4o")).toBe(true);
+      expect(supportsFn("claude-3-sonnet")).toBe(true);
+      expect(supportsFn("gemini-pro")).toBe(true);
+      expect(supportsFn("anthropic/claude-opus-4.6")).toBe(true);
+    });
+
+    it("should return false for non-tool-supporting patterns", () => {
+      expect(supportsFn("random-model")).toBe(false);
+      expect(supportsFn("")).toBe(false);
     });
   });
 
   describe("edge cases", () => {
     it("should handle empty model names", () => {
-      expect(PROVIDER_TOOL_SUPPORT["continue-proxy"]("")).toBe(false);
       expect(PROVIDER_TOOL_SUPPORT["anthropic"]("")).toBe(false);
       expect(PROVIDER_TOOL_SUPPORT["openai"]("")).toBe(false);
       expect(PROVIDER_TOOL_SUPPORT["gemini"]("")).toBe(false);
@@ -452,9 +438,9 @@ describe("isRecommendedAgentModel", () => {
       expect(isRecommendedAgentModel("gemini-2.5-pro-preview")).toBe(true);
     });
 
-    it("should return true for Gemini 3 Pro models", () => {
-      expect(isRecommendedAgentModel("gemini-3-pro-preview")).toBe(true);
-      expect(isRecommendedAgentModel("gemini-3-pro")).toBe(true);
+    it("should return true for Gemini 3.1 Pro and 3 Flash Preview models", () => {
+      expect(isRecommendedAgentModel("gemini-3.1-pro-preview")).toBe(true);
+      expect(isRecommendedAgentModel("gemini-3-flash-preview")).toBe(true);
     });
 
     it("should return false for Gemini Flash models", () => {
@@ -519,14 +505,14 @@ describe("isRecommendedAgentModel", () => {
 
   describe("case insensitivity", () => {
     it("should handle uppercase model names", () => {
-      expect(isRecommendedAgentModel("GEMINI-3-PRO-PREVIEW")).toBe(true);
+      expect(isRecommendedAgentModel("GEMINI-3.1-PRO-PREVIEW")).toBe(true);
       expect(isRecommendedAgentModel("CLAUDE-4-SONNET")).toBe(true);
       expect(isRecommendedAgentModel("DEEPSEEK-R1")).toBe(true);
       expect(isRecommendedAgentModel("O3-MINI")).toBe(true);
     });
 
     it("should handle mixed case model names", () => {
-      expect(isRecommendedAgentModel("Gemini-3-Pro")).toBe(true);
+      expect(isRecommendedAgentModel("Gemini-3.1-Pro-Preview")).toBe(true);
       expect(isRecommendedAgentModel("Claude-Opus-4")).toBe(true);
       expect(isRecommendedAgentModel("DeepSeek-Reasoner")).toBe(true);
     });

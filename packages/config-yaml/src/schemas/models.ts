@@ -59,6 +59,7 @@ export const completionOptionsSchema = z.object({
   reasoningBudgetTokens: z.number().optional(),
   promptCaching: z.boolean().optional(),
   stream: z.boolean().optional(),
+  keepAlive: z.number().optional(),
 });
 export type CompletionOptions = z.infer<typeof completionOptionsSchema>;
 
@@ -179,6 +180,7 @@ const baseModelFields = {
   model: z.string(),
   apiKey: z.string().optional(),
   apiBase: z.string().optional(),
+  contextLength: z.number().optional(),
   maxStopWords: z.number().optional(),
   roles: modelRolesSchema.array().optional(),
   capabilities: modelCapabilitySchema.array().optional(),
@@ -189,43 +191,24 @@ const baseModelFields = {
   chatOptions: chatOptionsSchema.optional(),
   promptTemplates: promptTemplatesSchema.optional(),
   useLegacyCompletionsEndpoint: z.boolean().optional(),
+  useResponsesApi: z.boolean().optional(),
   env: z
     .record(z.string(), z.union([z.string(), z.boolean(), z.number()]))
     .optional(),
   autocompleteOptions: autocompleteOptionsSchema.optional(),
 };
 
-export const modelSchema = z.union([
-  z.object({
-    ...baseModelFields,
-    provider: z.literal("continue-proxy"),
-    apiKeyLocation: z.string().optional(),
-    envSecretLocations: z.record(z.string(), z.string()).optional(),
-    orgScopeId: z.string().nullable(),
-    onPremProxyUrl: z.string().nullable(),
-  }),
-  z.object({
-    ...baseModelFields,
-    provider: z.string().refine((val) => val !== "continue-proxy"),
-    sourceFile: z.string().optional(),
-  }),
-]);
+export const modelSchema = z.object({
+  ...baseModelFields,
+  provider: z.string(),
+  sourceFile: z.string().optional(),
+});
 
-export const partialModelSchema = z.union([
-  z
-    .object({
-      ...baseModelFields,
-      provider: z.literal("continue-proxy"),
-      apiKeyLocation: z.string().optional(),
-      envSecretLocations: z.record(z.string(), z.string()).optional(),
-    })
-    .partial(),
-  z
-    .object({
-      ...baseModelFields,
-      provider: z.string().refine((val) => val !== "continue-proxy"),
-    })
-    .partial(),
-]);
+export const partialModelSchema = z
+  .object({
+    ...baseModelFields,
+    provider: z.string(),
+  })
+  .partial();
 
 export type ModelConfig = z.infer<typeof modelSchema>;

@@ -26,10 +26,7 @@ import {
 } from "../schemas/index.js";
 import { ConfigResult, ConfigValidationError } from "../validation.js";
 import { BlockDuplicationDetector } from "./blockDuplicationDetector.js";
-import {
-  packageIdentifierToShorthandSlug,
-  useProxyForUnrenderedSecrets,
-} from "./clientRender.js";
+import { packageIdentifierToShorthandSlug } from "./clientRender.js";
 import { BlockType, getBlockType } from "./getBlockType.js";
 
 export function parseConfigYaml(configYaml: string): ConfigYaml {
@@ -224,10 +221,8 @@ export interface DoNotRenderSecretsUnrollAssistantOptions
 export interface RenderSecretsUnrollAssistantOptions
   extends BaseUnrollAssistantOptions {
   renderSecrets: true;
-  orgScopeId: string | null;
   currentUserSlug: string;
   platformClient: PlatformClient;
-  onPremProxyUrl: string | null;
   alwaysUseProxy?: boolean;
 }
 
@@ -310,10 +305,12 @@ export async function unrollAssistantFromContent(
   });
 
   if (!options.renderSecrets) {
+    const parsed = parseAssistantUnrolled(templatedYaml);
     return {
-      config: parseAssistantUnrolled(templatedYaml),
+      config: parsed,
       errors: [],
       configLoadInterrupted: false,
+      configName: parsed?.name || undefined,
     };
   }
 
@@ -325,15 +322,14 @@ export async function unrollAssistantFromContent(
   );
   const renderedYaml = renderTemplateData(templatedYaml, { secrets });
 
-  // Parse again and replace models with proxy versions where secrets weren't rendered
-  const renderedConfig = useProxyForUnrenderedSecrets(
-    parseAssistantUnrolled(renderedYaml),
-    id,
-    options.orgScopeId,
-    options.onPremProxyUrl,
-  );
+  const renderedConfig = parseAssistantUnrolled(renderedYaml);
 
-  return { config: renderedConfig, errors, configLoadInterrupted };
+  return {
+    config: renderedConfig,
+    errors,
+    configLoadInterrupted,
+    configName: renderedConfig?.name || undefined,
+  };
 }
 
 function isPackageAllowed(
@@ -678,6 +674,7 @@ export async function unrollBlocks(
     config: undefined,
     errors: undefined,
     configLoadInterrupted: false,
+    configName: unrolledAssistant.name || undefined,
   };
   configResult.config = unrolledAssistant;
   if (errors.length > 0) {

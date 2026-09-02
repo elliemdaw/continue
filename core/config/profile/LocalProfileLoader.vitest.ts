@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { ControlPlaneClient } from "../../control-plane/client.js";
 import { LLMLogger } from "../../llm/logger.js";
 import { testIde } from "../../test/fixtures.js";
 import LocalProfileLoader from "./LocalProfileLoader.js";
@@ -17,10 +16,6 @@ vi.mock("./doLoadConfig.js", () => ({
 }));
 
 describe("LocalProfileLoader", () => {
-  const controlPlaneClient = new ControlPlaneClient(
-    Promise.resolve(undefined),
-    testIde,
-  );
   const llmLogger = new LLMLogger();
 
   it("should pass pre-read content in packageIdentifier for override files", async () => {
@@ -29,12 +24,7 @@ describe("LocalProfileLoader", () => {
       content: "name: Test\nversion: 1.0.0\nschema: v1\n",
     };
 
-    const loader = new LocalProfileLoader(
-      testIde,
-      controlPlaneClient,
-      llmLogger,
-      overrideFile,
-    );
+    const loader = new LocalProfileLoader(testIde, llmLogger, overrideFile);
 
     await loader.doLoadConfig();
 
@@ -50,11 +40,7 @@ describe("LocalProfileLoader", () => {
   });
 
   it("should not include content in packageIdentifier when no override file", async () => {
-    const loader = new LocalProfileLoader(
-      testIde,
-      controlPlaneClient,
-      llmLogger,
-    );
+    const loader = new LocalProfileLoader(testIde, llmLogger);
 
     await loader.doLoadConfig();
 
@@ -66,5 +52,36 @@ describe("LocalProfileLoader", () => {
         }),
       }),
     );
+  });
+
+  it("should update title from configName when available", async () => {
+    mockDoLoadConfig.mockResolvedValueOnce({
+      config: {},
+      errors: [],
+      configLoadInterrupted: false,
+      configName: "My Custom Config",
+    });
+
+    const loader = new LocalProfileLoader(testIde, llmLogger);
+
+    expect(loader.description.title).toBe("Main Config");
+
+    await loader.doLoadConfig();
+
+    expect(loader.description.title).toBe("My Custom Config");
+  });
+
+  it("should keep default title when configName is not set", async () => {
+    mockDoLoadConfig.mockResolvedValueOnce({
+      config: {},
+      errors: [],
+      configLoadInterrupted: false,
+    });
+
+    const loader = new LocalProfileLoader(testIde, llmLogger);
+
+    await loader.doLoadConfig();
+
+    expect(loader.description.title).toBe("Main Config");
   });
 });

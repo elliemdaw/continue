@@ -31,12 +31,12 @@ import {
   ToolOverride,
   Usage,
 } from "../index.js";
+import { isAbortError } from "../util/isAbortError.js";
 import { isLemonadeInstalled } from "../util/lemonadeHelper.js";
 import { Logger } from "../util/Logger.js";
 import mergeJson from "../util/merge.js";
 import { renderChatMessage } from "../util/messageContent.js";
 import { isOllamaInstalled } from "../util/ollamaHelper.js";
-import { TokensBatchingService } from "../util/TokensBatchingService.js";
 import { withExponentialBackoff } from "../util/withExponentialBackoff.js";
 
 import {
@@ -99,10 +99,6 @@ export abstract class BaseLLM implements ILLM {
     return (this.constructor as typeof BaseLLM).providerName;
   }
 
-  /**
-   * This exists because for the continue-proxy, sometimes we want to get the value of the underlying provider that is used on the server
-   * For example, the underlying provider should always be sent with dev data
-   */
   get underlyingProviderName(): string {
     return this.providerName;
   }
@@ -168,8 +164,6 @@ export abstract class BaseLLM implements ILLM {
   apiKeyLocation?: string;
   envSecretLocations?: Record<string, string>;
   apiBase?: string;
-  orgScopeId?: string | null;
-
   onPremProxyUrl?: string | null;
 
   cacheBehavior?: CacheBehavior;
@@ -222,11 +216,7 @@ export abstract class BaseLLM implements ILLM {
 
     this.model = options.model;
     // Use @continuedev/llm-info package to autodetect certain parameters
-    const modelSearchString =
-      this.providerName === "continue-proxy"
-        ? this.model?.split("/").pop() || this.model
-        : this.model;
-    const llmInfo = findLlmInfo(modelSearchString, this.underlyingProviderName);
+    const llmInfo = findLlmInfo(this.model, this.underlyingProviderName);
 
     const templateType =
       options.template ?? autodetectTemplateType(options.model);
@@ -272,7 +262,6 @@ export abstract class BaseLLM implements ILLM {
     // continueProperties
     this.apiKeyLocation = options.apiKeyLocation;
     this.envSecretLocations = options.envSecretLocations;
-    this.orgScopeId = options.orgScopeId;
     this.apiBase = options.apiBase;
 
     this.onPremProxyUrl = options.onPremProxyUrl;
@@ -328,6 +317,7 @@ export abstract class BaseLLM implements ILLM {
       apiBase: this.apiBase,
       requestOptions: this.requestOptions,
       env: this._llmOptions.env,
+      useResponsesApi: this._llmOptions.useResponsesApi,
     });
   }
 
@@ -360,13 +350,6 @@ export abstract class BaseLLM implements ILLM {
     let generatedTokens = this.countTokens(completion);
     let thinkingTokens = thinking ? this.countTokens(thinking) : 0;
 
-    TokensBatchingService.getInstance().addTokens(
-      model,
-      this.providerName,
-      promptTokens,
-      generatedTokens,
-    );
-
     void DevDataSqliteDb.logTokensGenerated(
       model,
       this.providerName,
@@ -394,7 +377,7 @@ export abstract class BaseLLM implements ILLM {
       });
       return "success";
     } else {
-      if (error === "cancel" || error?.name?.includes("AbortError")) {
+      if (isAbortError(error)) {
         interaction?.logItem({
           kind: "cancel",
           promptTokens,
@@ -485,7 +468,6 @@ export abstract class BaseLLM implements ILLM {
 
         return resp;
       } catch (e: any) {
-        // Capture all fetch errors to Sentry for monitoring
         Logger.error(e, {
           context: "llm_fetch",
           url: String(input),
@@ -502,7 +484,7 @@ export abstract class BaseLLM implements ILLM {
             `HTTP ${e.response.status} ${e.response.statusText} from ${e.response.url}\n\n${e.response.body}`,
           );
         } else {
-          if (e.name !== "AbortError") {
+          if (!isAbortError(e)) {
             // Don't pollute console with abort errors. Check on name instead of instanceof, to avoid importing node-fetch here
             console.debug(
               `${e.message}\n\nCode: ${e.code}\nError number: ${e.errno}\nSyscall: ${e.erroredSysCall}\nType: ${e.type}\n\n${e.stack}`,
@@ -680,7 +662,6 @@ export abstract class BaseLLM implements ILLM {
         undefined,
       );
     } catch (e) {
-      // Capture FIM (Fill-in-the-Middle) completion failures to Sentry
       Logger.error(e as Error, {
         context: "llm_stream_fim",
         model: completionOptions.model,
@@ -811,7 +792,6 @@ export abstract class BaseLLM implements ILLM {
         undefined,
       );
     } catch (e) {
-      // Capture streaming completion failures to Sentry
       Logger.error(e as Error, {
         context: "llm_stream_complete",
         model: completionOptions.model,
@@ -920,7 +900,6 @@ export abstract class BaseLLM implements ILLM {
         undefined,
       );
     } catch (e) {
-      // Capture completion failures to Sentry
       Logger.error(e as Error, {
         context: "llm_complete",
         model: completionOptions.model,
@@ -1044,8 +1023,9 @@ export abstract class BaseLLM implements ILLM {
   private canUseOpenAIResponses(options: CompletionOptions): boolean {
     return (
       this.providerName === "openai" &&
+      this._llmOptions.useResponsesApi !== false &&
       typeof (this as any)._streamResponses === "function" &&
-      (this as any).isOSeriesOrGpt5Model(options.model)
+      (this as any).isOSeriesOrGpt5PlusModel(options.model)
     );
   }
 
@@ -1305,7 +1285,6 @@ export abstract class BaseLLM implements ILLM {
         usage,
       );
     } catch (e) {
-      // Capture chat streaming failures to Sentry
       Logger.error(e as Error, {
         context: "llm_stream_chat",
         model: completionOptions.model,
