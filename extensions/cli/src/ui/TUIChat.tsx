@@ -9,7 +9,6 @@ import React, {
 
 import { ToolPermissionServiceState } from "src/services/ToolPermissionService.js";
 
-import { listUserOrganizations } from "../auth/workos.js";
 import { useServices } from "../hooks/useService.js";
 import {
   ApiClientServiceState,
@@ -32,11 +31,7 @@ import { useNavigation } from "./context/NavigationContext.js";
 import { useChat } from "./hooks/useChat.js";
 import { useContextPercentage } from "./hooks/useContextPercentage.js";
 import { useMessageRenderer } from "./hooks/useMessageRenderer.js";
-import {
-  useIntroMessage,
-  useLoginHandlers,
-  useSelectors,
-} from "./hooks/useTUIChatHooks.js";
+import { useIntroMessage, useSelectors } from "./hooks/useTUIChatHooks.js";
 
 interface TUIChatProps {
   // Remote mode props
@@ -113,40 +108,9 @@ function useTUIChatServices(remoteUrl?: string) {
   return { services, allServicesReady, isRemoteMode };
 }
 
-// Custom hook to fetch organization name
-function useOrganizationName(organizationId?: string): string | undefined {
-  const [organizationName, setOrganizationName] = useState<string | undefined>(
-    undefined,
-  );
-
-  useEffect(() => {
-    if (!organizationId) {
-      setOrganizationName(undefined);
-      return;
-    }
-
-    let isMounted = true;
-
-    async function fetchOrgName() {
-      try {
-        const orgs = await listUserOrganizations();
-        if (!isMounted) return;
-
-        const org = orgs?.find((o) => o.id === organizationId);
-        if (org) {
-          setOrganizationName(org.name);
-        }
-      } catch (error) {
-        logger.debug("Failed to fetch organization name", { error });
-      }
-    }
-
-    fetchOrgName();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [organizationId]);
+// Organization names are no longer available (Hub integration removed)
+function useOrganizationName(_organizationId?: string): string | undefined {
+  const organizationName = undefined;
 
   return organizationName;
 }
@@ -211,13 +175,6 @@ const TUIChat: React.FC<TUIChatProps> = ({
     isRemoteMode,
     services,
     allServicesReady,
-  );
-
-  // Use login handlers
-  const { handleLoginTokenSubmit } = useLoginHandlers(
-    navigateTo,
-    navState,
-    closeCurrentScreen,
   );
 
   // State to trigger static content refresh for /clear command
@@ -287,6 +244,7 @@ const TUIChat: React.FC<TUIChatProps> = ({
     onShowUpdateSelector: () => navigateTo("update"),
     onShowSessionSelector: () => navigateTo("session"),
     onShowJobsSelector: () => navigateTo("jobs"),
+    onShowExportSelector: () => navigateTo("export"),
     onReload: handleReload,
     onClear: handleClear,
     onRefreshStatic: () => setStaticRefreshTrigger((prev) => prev + 1),
@@ -330,6 +288,71 @@ const TUIChat: React.FC<TUIChatProps> = ({
       );
     },
     [closeCurrentScreen, setChatHistory, setShowIntroMessage],
+  );
+
+  // Export session handler
+  const handleExportSession = useCallback(
+    async (sessionId: string) => {
+      try {
+        const { loadSessionById } = await import("../session.js");
+        const fs = await import("fs");
+        const path = await import("path");
+
+        const session = loadSessionById(sessionId);
+        if (!session) {
+          setChatHistory((prev) => [
+            ...prev,
+            {
+              message: {
+                role: "system",
+                content: `Failed to export: Session ${sessionId} not found`,
+              },
+              contextItems: [],
+            },
+          ]);
+          closeCurrentScreen();
+          return;
+        }
+
+        const exportPayload = {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          session,
+        };
+
+        const defaultPath = path.join(
+          process.cwd(),
+          `continue-session-${session.sessionId}.json`,
+        );
+        const jsonOutput = JSON.stringify(exportPayload, null, 2);
+        fs.writeFileSync(defaultPath, jsonOutput, "utf-8");
+
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            message: {
+              role: "system",
+              content: `Session exported to ${defaultPath}`,
+            },
+            contextItems: [],
+          },
+        ]);
+        closeCurrentScreen();
+      } catch (error: any) {
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            message: {
+              role: "system",
+              content: `Failed to export session: ${error.message}`,
+            },
+            contextItems: [],
+          },
+        ]);
+        closeCurrentScreen();
+      }
+    },
+    [closeCurrentScreen, setChatHistory],
   );
 
   // Determine if input should be disabled
@@ -426,12 +449,11 @@ const TUIChat: React.FC<TUIChatProps> = ({
         {/* All screen-specific content */}
         <ScreenContent
           isScreenActive={isScreenActive}
-          navState={navState}
           services={services}
-          handleLoginTokenSubmit={handleLoginTokenSubmit}
           handleConfigSelect={handleConfigSelect}
           handleModelSelect={handleModelSelect}
           handleSessionSelect={handleSessionSelect}
+          handleExportSession={handleExportSession}
           handleReload={handleReload}
           closeCurrentScreen={closeCurrentScreen}
           activePermissionRequest={activePermissionRequest}
@@ -459,7 +481,7 @@ const TUIChat: React.FC<TUIChatProps> = ({
           <ResourceDebugBar visible={navState.currentScreen === "chat"} />
         )}
 
-        {/* Free trial status and Continue CLI info - always show */}
+        {/* Bottom status bar */}
         <BottomStatusBar
           currentMode={services?.toolPermissions?.currentMode ?? "normal"}
           remoteUrl={remoteUrl}

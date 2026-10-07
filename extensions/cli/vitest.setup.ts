@@ -55,10 +55,12 @@ vi.mock("./src/systemMessage.js", () => ({
     .mockResolvedValue(
       "You are an agent in the Continue CLI. Given the user's prompt, you should use the tools available to you to answer the user's question.",
     ),
+  loadMarkdownRulesWithMetadata: vi.fn().mockReturnValue([]),
 }));
 
-// Mock environment for tests
-process.env.CONTINUE_GLOBAL_DIR = "/tmp/continue-test";
+// NOTE: CONTINUE_GLOBAL_DIR is set to a unique per-worker temp dir in
+// ./vitest.global-dir-setup.ts (which runs first) to isolate the shared
+// GlobalContext store across parallel test files. Do not override it here.
 
 // Set up global afterEach hook to clear all timers and reset console
 afterEach(() => {

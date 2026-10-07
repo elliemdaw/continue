@@ -60,6 +60,7 @@ export function useChat({
   onShowMCPSelector,
   onShowSessionSelector,
   onShowJobsSelector,
+  onShowExportSelector,
   onClear,
   onRefreshStatic,
   isRemoteMode = false,
@@ -418,10 +419,7 @@ export function useChat({
       return message;
     }
 
-    const commandResult = await handleSlashCommands(message, assistant, {
-      remoteUrl,
-      isRemoteMode,
-    });
+    const commandResult = await handleSlashCommands(message, assistant);
 
     if (!commandResult) {
       return message;
@@ -453,6 +451,7 @@ export function useChat({
       onShowSessionSelector,
       onShowJobsSelector,
       onShowUpdateSelector,
+      onShowExportSelector,
       onClear,
     });
 

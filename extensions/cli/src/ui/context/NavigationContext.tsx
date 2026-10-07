@@ -12,21 +12,19 @@ import React, {
  */
 export type NavigationScreen =
   | "chat" // Normal chat interface
-  | "config" // Config selector (includes organization switching)
+  | "config" // Config selector
   | "model" // Model selector
-  | "free-trial" // Free trial transition UI
-  | "login" // Login prompt
   | "mcp" // MCP selector
   | "session" // Session selector
   | "diff" // Full-screen diff overlay
   | "update" // Update selector
   | "edit" // Edit message selector
   | "jobs" // Background Jobs selector
-  | "session"; // Session selector
+  | "export"; // Export session selector
 
 interface NavigationState {
   currentScreen: NavigationScreen;
-  // Screen-specific data (e.g., login prompt details)
+  // Screen-specific data passed to the active screen
   screenData?: any;
 }
 
